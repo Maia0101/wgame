@@ -4,8 +4,8 @@
   "description": "Tap squares as family moments happen — first to bingo wins!",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#FFF8F0",
-  "theme_color": "#6B4EAA",
+  "background_color": "#120a24",
+  "theme_color": "#1a1033",
   "orientation": "portrait-primary",
   "icons": [
     {

@@ -4,40 +4,54 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="The W Game">
-  <meta name="theme-color" content="#6B4EAA">
+  <meta name="theme-color" content="#1a1033">
   <meta name="description" content="The W Game — tap squares as family moments happen!">
   <title>The W Game</title>
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=14">
 </head>
 <body>
+  <div class="bg-glow bg-glow--1" aria-hidden="true"></div>
+  <div class="bg-glow bg-glow--2" aria-hidden="true"></div>
+
   <div id="app">
     <header class="header">
-      <h1 class="title">🎉 The W Game</h1>
-      <p class="subtitle">Mark every square — first to finish wins!</p>
+      <div class="logo-mark">W</div>
+      <div>
+        <h1 class="title">The W Game</h1>
+        <p class="subtitle">First to mark every square wins</p>
+      </div>
     </header>
 
-    <section class="player-section">
-      <p class="player-label">Who's playing?</p>
+    <div id="sync-status" class="sync-pill" aria-live="polite"></div>
+
+    <section class="scoreboard">
+      <p class="section-label">Players</p>
       <div id="player-tabs" class="player-tabs" role="tablist"></div>
-      <p id="player-badge" class="player-badge"></p>
-      <p id="sync-status" class="sync-status"></p>
       <div id="progress-row" class="progress-row" aria-label="Everyone's progress"></div>
     </section>
 
-    <main id="board-container" class="board-container" aria-label="Bingo board"></main>
+    <section class="board-card">
+      <div class="board-header">
+        <p id="player-badge" class="board-label"></p>
+        <span class="board-hint">Tap when it happens</span>
+      </div>
+      <main id="board-container" class="board-container" aria-label="Bingo board"></main>
+    </section>
 
     <div id="loading" class="loading hidden">Connecting everyone…</div>
 
     <div class="actions">
-      <button id="reset-btn" class="btn btn-danger" type="button">Reset Card</button>
+      <button id="reset-btn" class="btn btn-ghost" type="button">Reset Card</button>
     </div>
   </div>
 
-  <!-- Bingo Modal -->
   <div id="bingo-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="bingo-title">
     <div class="modal-backdrop"></div>
     <div class="modal-content bingo-modal-content">
@@ -51,7 +65,7 @@
   <canvas id="confetti-canvas" aria-hidden="true"></canvas>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=13"></script>
+  <script src="app.js?v=14"></script>
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then((regs) => {

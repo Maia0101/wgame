@@ -169,8 +169,7 @@ function saveLocal() {
 function setSyncStatus(text, online) {
   if (!els.syncStatus) return;
   els.syncStatus.textContent = text;
-  els.syncStatus.classList.toggle("online", online);
-  els.syncStatus.classList.toggle("offline", !online);
+  els.syncStatus.className = "sync-pill" + (online ? " online" : online === false ? " offline" : "");
 }
 
 function queuePush() {
@@ -251,10 +250,14 @@ function renderProgressRow() {
 
   PLAYERS.forEach((name) => {
     const count = markedCount(name);
+    const pct = Math.round((count / BOARD_SIZE) * 100);
     const chip = document.createElement("div");
     chip.className = "progress-chip" + (name === getActivePlayerName() ? " active" : "");
     if (state.players[name]?.hasWon) chip.classList.add("finished");
-    chip.innerHTML = `<strong>${name}</strong><span>${count}/${BOARD_SIZE}</span>`;
+    chip.innerHTML = `
+      <strong>${name}</strong>
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+      <span>${count}/${BOARD_SIZE}</span>`;
     chip.addEventListener("click", () => selectPlayer(name));
     els.progressRow.appendChild(chip);
   });
@@ -269,7 +272,7 @@ function renderProgressRow() {
 
 function renderPlayerBadge() {
   if (els.playerBadge) {
-    els.playerBadge.textContent = "8 moments · synced for everyone";
+    els.playerBadge.textContent = `${getActivePlayerName()}'s card`;
   }
 }
 
