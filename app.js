@@ -6,6 +6,12 @@ const WGAME_CONFIG = {
 
 const PLAYERS = ["Ana", "Brandon", "Daniel"];
 
+const PLAYER_TEAMS = {
+  Ana: { name: "Ana", team: "Real Madrid", logo: "assets/teams/ana.png" },
+  Brandon: { name: "Brandon", team: "Barcelona", logo: "assets/teams/brandon.png" },
+  Daniel: { name: "Daniel", team: "Flamengo", logo: "assets/teams/daniel.png" },
+};
+
 const PLAYER_ITEMS = {
   Ana: [
     "Someone talks about Brandon and Ana having a baby",
@@ -226,19 +232,29 @@ function maybeShowBingo(winner, fromRemote) {
   showBingo(winner, fromRemote);
 }
 
+function playerLabel(name) {
+  const info = PLAYER_TEAMS[name];
+  return info ? `${info.name} · ${info.team}` : name;
+}
+
 function renderPlayerTabs() {
   if (!els.playerTabs) return;
   const active = getActivePlayerName();
   els.playerTabs.innerHTML = "";
 
   PLAYERS.forEach((name) => {
+    const info = PLAYER_TEAMS[name];
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "player-tab" + (name === active ? " active" : "");
     if (state.players[name]?.hasWon) btn.classList.add("finished");
-    btn.textContent = name;
     btn.setAttribute("role", "tab");
     btn.setAttribute("aria-selected", String(name === active));
+    btn.setAttribute("aria-label", playerLabel(name));
+    btn.innerHTML = `
+      <img class="team-logo" src="${info.logo}" alt="${info.team}" width="36" height="36">
+      <span class="team-name">${info.name}</span>
+      <span class="team-club">${info.team}</span>`;
     btn.addEventListener("click", () => selectPlayer(name));
     els.playerTabs.appendChild(btn);
   });
@@ -249,13 +265,17 @@ function renderProgressRow() {
   els.progressRow.innerHTML = "";
 
   PLAYERS.forEach((name) => {
+    const info = PLAYER_TEAMS[name];
     const count = markedCount(name);
     const pct = Math.round((count / BOARD_SIZE) * 100);
     const chip = document.createElement("div");
     chip.className = "progress-chip" + (name === getActivePlayerName() ? " active" : "");
     if (state.players[name]?.hasWon) chip.classList.add("finished");
     chip.innerHTML = `
-      <strong>${name}</strong>
+      <div class="progress-chip-left">
+        <img class="team-logo team-logo--sm" src="${info.logo}" alt="${info.team}" width="28" height="28">
+        <strong>${info.name}</strong>
+      </div>
       <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
       <span>${count}/${BOARD_SIZE}</span>`;
     chip.addEventListener("click", () => selectPlayer(name));
@@ -265,15 +285,18 @@ function renderProgressRow() {
   if (state.gameWinner) {
     const winner = document.createElement("p");
     winner.className = "game-winner";
-    winner.textContent = `🏆 ${state.gameWinner} finished first`;
+    winner.textContent = `🏆 ${playerLabel(state.gameWinner)} finished first`;
     els.progressRow.appendChild(winner);
   }
 }
 
 function renderPlayerBadge() {
-  if (els.playerBadge) {
-    els.playerBadge.textContent = `${getActivePlayerName()}'s card`;
-  }
+  if (!els.playerBadge) return;
+  const name = getActivePlayerName();
+  const info = PLAYER_TEAMS[name];
+  els.playerBadge.innerHTML = `
+    <img class="team-logo team-logo--md" src="${info.logo}" alt="${info.team}" width="32" height="32">
+    <span>${info.name} · ${info.team}</span>`;
 }
 
 function fitCellText(cell) {
@@ -374,7 +397,7 @@ function checkBoardComplete(marked) {
 
 function showBingo(playerName, fromRemote) {
   const prefix = fromRemote ? "Everyone saw it — " : "";
-  els.bingoMessage.textContent = `${prefix}${playerName} finished their card first — BINGO! 🎉`;
+  els.bingoMessage.textContent = `${prefix}${playerLabel(playerName)} finished first — BINGO! 🎉`;
   els.bingoModal.classList.remove("hidden");
   startConfetti();
 }
