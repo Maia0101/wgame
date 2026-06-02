@@ -34,8 +34,9 @@ const PLAYER_ITEMS = {
 };
 
 const FREE_SPACE = "FREE SPACE";
-const CENTER_INDEX = 12;
-const STORAGE_KEY = "family-reunion-bingo-v3";
+const BOARD_SIZE = 9;
+const CENTER_INDEX = 4;
+const STORAGE_KEY = "the-w-game-v4";
 
 let state = loadState();
 let confettiAnimating = false;
@@ -73,32 +74,45 @@ function shuffle(array) {
 }
 
 function createBoard(playerName) {
-  const items = PLAYER_ITEMS[playerName];
-  const pool = items.flatMap((item) => [item, item, item]);
-  const board = shuffle(pool);
-  board.splice(CENTER_INDEX, 0, FREE_SPACE);
+  const shuffled = shuffle([...PLAYER_ITEMS[playerName]]);
+  const board = [];
+  let itemIdx = 0;
+
+  for (let i = 0; i < BOARD_SIZE; i++) {
+    if (i === CENTER_INDEX) {
+      board.push(FREE_SPACE);
+    } else {
+      board.push(shuffled[itemIdx++]);
+    }
+  }
+
   return {
     items: board,
-    marked: Array(25).fill(false).map((_, i) => i === CENTER_INDEX),
+    marked: Array(BOARD_SIZE).fill(false).map((_, i) => i === CENTER_INDEX),
     hasWon: false,
     createdAt: Date.now(),
   };
 }
 
 function boardUsesPlayerItems(data, playerName) {
-  if (!data || !Array.isArray(data.items) || data.items.length !== 25) return false;
+  if (!data || !Array.isArray(data.items) || data.items.length !== BOARD_SIZE) return false;
+
   const allowed = new Set(PLAYER_ITEMS[playerName]);
-  return data.items
-    .filter((item) => item !== FREE_SPACE)
-    .every((item) => allowed.has(item));
+  const nonFree = data.items.filter((item) => item !== FREE_SPACE);
+
+  if (nonFree.length !== 8) return false;
+  if (new Set(nonFree).size !== 8) return false;
+  if (data.items[CENTER_INDEX] !== FREE_SPACE) return false;
+
+  return nonFree.every((item) => allowed.has(item));
 }
 
 function normalizePlayer(data, playerName) {
   if (!boardUsesPlayerItems(data, playerName)) {
     return createBoard(playerName);
   }
-  if (!Array.isArray(data.marked) || data.marked.length !== 25) {
-    data.marked = Array(25).fill(false).map((_, i) => i === CENTER_INDEX);
+  if (!Array.isArray(data.marked) || data.marked.length !== BOARD_SIZE) {
+    data.marked = Array(BOARD_SIZE).fill(false).map((_, i) => i === CENTER_INDEX);
   }
   data.marked[CENTER_INDEX] = true;
   if (typeof data.hasWon !== "boolean") data.hasWon = false;
@@ -219,18 +233,14 @@ function toggleCell(index) {
 }
 
 const WIN_LINES = [
-  [0, 1, 2, 3, 4],
-  [5, 6, 7, 8, 9],
-  [10, 11, 12, 13, 14],
-  [15, 16, 17, 18, 19],
-  [20, 21, 22, 23, 24],
-  [0, 5, 10, 15, 20],
-  [1, 6, 11, 16, 21],
-  [2, 7, 12, 17, 22],
-  [3, 8, 13, 18, 23],
-  [4, 9, 14, 19, 24],
-  [0, 6, 12, 18, 24],
-  [4, 8, 12, 16, 20],
+  [0, 1, 2],
+  [3, 4, 5],
+  [6, 7, 8],
+  [0, 3, 6],
+  [1, 4, 7],
+  [2, 5, 8],
+  [0, 4, 8],
+  [2, 4, 6],
 ];
 
 function checkBingo(marked) {
