@@ -1,3 +1,9 @@
+const WGAME_CONFIG = {
+  supabaseUrl: "https://xqeooqbknzblrxavjljs.supabase.co",
+  supabaseKey:
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhxZW9vcWJrbnpibHJ4YXZqbGpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NzI2NjYsImV4cCI6MjA4NTU0ODY2Nn0.WV6uob6xa1NGQTffkGrBgAXvlTQTLl_VWoOG-pAavys",
+};
+
 const PLAYERS = ["Ana", "Brandon", "Daniel"];
 
 const PLAYER_ITEMS = {
@@ -220,6 +226,7 @@ function maybeShowBingo(winner, fromRemote) {
 }
 
 function renderPlayerTabs() {
+  if (!els.playerTabs) return;
   const active = getActivePlayerName();
   els.playerTabs.innerHTML = "";
 
@@ -259,7 +266,9 @@ function renderProgressRow() {
 }
 
 function renderPlayerBadge() {
-  els.playerBadge.textContent = "8 moments · synced for everyone";
+  if (els.playerBadge) {
+    els.playerBadge.textContent = "8 moments · synced for everyone";
+  }
 }
 
 function fitCellText(cell) {
@@ -283,6 +292,8 @@ function fitAllCellText() {
 function renderBoard() {
   const name = getActivePlayerName();
   const player = state.players[name];
+  if (!els.boardContainer || !player) return;
+
   els.boardContainer.innerHTML = "";
 
   player.items.forEach((item, index) => {
@@ -422,12 +433,12 @@ function subscribeRealtime() {
 }
 
 function initSupabase() {
-  if (!window.supabase?.createClient || !window.WGAME_CONFIG) {
+  if (!window.supabase?.createClient) {
     return null;
   }
   return window.supabase.createClient(
-    window.WGAME_CONFIG.supabaseUrl,
-    window.WGAME_CONFIG.supabaseKey
+    WGAME_CONFIG.supabaseUrl,
+    WGAME_CONFIG.supabaseKey
   );
 }
 
@@ -482,9 +493,16 @@ async function connectCloud() {
 }
 
 // Confetti
-const confettiCtx = els.confettiCanvas.getContext("2d");
+let confettiCtx = null;
 let confettiPieces = [];
 let confettiFrame = null;
+
+function getConfettiCtx() {
+  if (!confettiCtx && els.confettiCanvas) {
+    confettiCtx = els.confettiCanvas.getContext("2d");
+  }
+  return confettiCtx;
+}
 
 function resizeConfettiCanvas() {
   els.confettiCanvas.width = window.innerWidth;
@@ -517,27 +535,32 @@ function startConfetti() {
 function stopConfetti() {
   confettiAnimating = false;
   if (confettiFrame) cancelAnimationFrame(confettiFrame);
-  confettiCtx.clearRect(0, 0, els.confettiCanvas.width, els.confettiCanvas.height);
+  const ctx = getConfettiCtx();
+  if (ctx && els.confettiCanvas) {
+    ctx.clearRect(0, 0, els.confettiCanvas.width, els.confettiCanvas.height);
+  }
   confettiPieces = [];
 }
 
 function animateConfetti() {
   if (!confettiAnimating) return;
+  const ctx = getConfettiCtx();
+  if (!ctx || !els.confettiCanvas) return;
 
-  confettiCtx.clearRect(0, 0, els.confettiCanvas.width, els.confettiCanvas.height);
+  ctx.clearRect(0, 0, els.confettiCanvas.width, els.confettiCanvas.height);
 
   confettiPieces.forEach((p) => {
     p.y += p.speedY;
     p.x += p.speedX;
     p.rotation += p.rotationSpeed;
 
-    confettiCtx.save();
-    confettiCtx.translate(p.x, p.y);
-    confettiCtx.rotate((p.rotation * Math.PI) / 180);
-    confettiCtx.globalAlpha = p.opacity;
-    confettiCtx.fillStyle = p.color;
-    confettiCtx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
-    confettiCtx.restore();
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate((p.rotation * Math.PI) / 180);
+    ctx.globalAlpha = p.opacity;
+    ctx.fillStyle = p.color;
+    ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+    ctx.restore();
   });
 
   confettiPieces = confettiPieces.filter((p) => p.y < els.confettiCanvas.height + 20);
@@ -549,17 +572,29 @@ function animateConfetti() {
   confettiFrame = requestAnimationFrame(animateConfetti);
 }
 
-els.resetBtn.addEventListener("click", resetMyCard);
-els.closeBingoBtn.addEventListener("click", hideBingo);
-els.bingoModal.querySelector(".modal-backdrop").addEventListener("click", hideBingo);
+els.resetBtn?.addEventListener("click", resetMyCard);
+els.closeBingoBtn?.addEventListener("click", hideBingo);
+els.bingoModal?.querySelector(".modal-backdrop")?.addEventListener("click", hideBingo);
 window.addEventListener("resize", () => {
   if (confettiAnimating) resizeConfettiCanvas();
   fitAllCellText();
 });
 
+function showStartupError(message) {
+  const board = els.boardContainer;
+  if (!board) return;
+  board.innerHTML = `<p style="grid-column:1/-1;text-align:center;padding:24px;color:#c44;font-weight:600;">${message}</p>`;
+}
+
 function startApp() {
-  bootstrapLocal();
-  connectCloud();
+  try {
+    bootstrapLocal();
+    connectCloud();
+  } catch (error) {
+    ensureAllPlayers();
+    showStartupError("Something went wrong loading the game. Please refresh the page.");
+    console.error(error);
+  }
 }
 
 if (document.readyState === "loading") {
