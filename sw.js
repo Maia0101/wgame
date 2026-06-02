@@ -1,4 +1,4 @@
-const CACHE_NAME = "the-w-game-v9";
+const CACHE_NAME = "the-w-game-v10";
 const ASSETS = [
   "./",
   "./index.html",

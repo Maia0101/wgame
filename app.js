@@ -37,12 +37,9 @@ const FREE_SPACE = "FREE SPACE";
 const BOARD_SIZE = 9;
 const CENTER_INDEX = 4;
 const STORAGE_KEY = "the-w-game-v5";
+const SYNC_TIMEOUT_MS = 8000;
 
-const supabase = window.supabase.createClient(
-  window.WGAME_CONFIG.supabaseUrl,
-  window.WGAME_CONFIG.supabaseKey
-);
-
+let supabase = null;
 let state = defaultState();
 let confettiAnimating = false;
 let syncingRemote = false;
@@ -171,13 +168,15 @@ function setSyncStatus(text, online) {
 function queuePush() {
   state.updatedAt = Date.now();
   saveLocal();
+  if (!supabase) return;
+
   pushQueue = pushQueue.then(pushRemote).catch(() => {
     setSyncStatus("Offline — saved on this phone", false);
   });
 }
 
 async function pushRemote() {
-  if (syncingRemote) return;
+  if (syncingRemote || !supabase) return;
 
   setSyncStatus("Saving…", true);
   const { error } = await supabase.from("wgame_state").upsert({
@@ -403,6 +402,8 @@ async function seedCloudState() {
 }
 
 function subscribeRealtime() {
+  if (!supabase) return;
+
   supabase
     .channel("wgame-state")
     .on(
@@ -420,34 +421,63 @@ function subscribeRealtime() {
     });
 }
 
-async function init() {
+function initSupabase() {
+  if (!window.supabase?.createClient || !window.WGAME_CONFIG) {
+    return null;
+  }
+  return window.supabase.createClient(
+    window.WGAME_CONFIG.supabaseUrl,
+    window.WGAME_CONFIG.supabaseKey
+  );
+}
+
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), ms)),
+  ]);
+}
+
+function bootstrapLocal() {
   try {
     const local = localStorage.getItem(STORAGE_KEY);
     if (local) state = normalizeFullState(JSON.parse(local));
+  } catch (_) {}
 
-    setSyncStatus("Connecting…", true);
-    const cloud = await loadCloudState();
+  ensureAllPlayers();
+  saveLocal();
+  if (els.loading) els.loading.classList.add("hidden");
+  renderUI();
+}
+
+async function connectCloud() {
+  supabase = initSupabase();
+  if (!supabase) {
+    setSyncStatus("Offline — using this phone only", false);
+    return;
+  }
+
+  setSyncStatus("Connecting…", true);
+
+  try {
+    const cloud = await withTimeout(loadCloudState(), SYNC_TIMEOUT_MS);
 
     if (cloud) {
       applyRemoteState(cloud, false);
     } else {
-      await seedCloudState();
+      await withTimeout(seedCloudState(), SYNC_TIMEOUT_MS);
     }
 
     subscribeRealtime();
+    setSyncStatus("Live — everyone sees updates", true);
+
+    if (state.gameWinner) {
+      maybeShowBingo(state.gameWinner, false);
+    }
   } catch (_) {
     ensureAllPlayers();
     setSyncStatus("Offline — using this phone only", false);
-    if (els.loading) els.loading.classList.add("hidden");
     renderUI();
-    return;
-  }
-
-  if (els.loading) els.loading.classList.add("hidden");
-  renderUI();
-
-  if (state.gameWinner) {
-    maybeShowBingo(state.gameWinner, false);
   }
 }
 
@@ -527,4 +557,13 @@ window.addEventListener("resize", () => {
   fitAllCellText();
 });
 
-init();
+function startApp() {
+  bootstrapLocal();
+  connectCloud();
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", startApp);
+} else {
+  startApp();
+}
