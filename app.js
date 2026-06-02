@@ -7,9 +7,9 @@ const WGAME_CONFIG = {
 const PLAYERS = ["Ana", "Brandon", "Daniel"];
 
 const PLAYER_TEAMS = {
-  Ana: { name: "Ana", team: "Real Madrid", logo: "assets/teams/ana.png" },
-  Brandon: { name: "Brandon", team: "Barcelona", logo: "assets/teams/brandon.png" },
-  Daniel: { name: "Daniel", team: "Flamengo", logo: "assets/teams/daniel.png" },
+  Ana: { team: "Real Madrid", logo: "assets/teams/ana.png" },
+  Brandon: { team: "Barcelona", logo: "assets/teams/brandon.png" },
+  Daniel: { team: "Flamengo", logo: "assets/teams/daniel.png" },
 };
 
 const PLAYER_ITEMS = {
@@ -234,7 +234,7 @@ function maybeShowBingo(winner, fromRemote) {
 
 function playerLabel(name) {
   const info = PLAYER_TEAMS[name];
-  return info ? `${info.name} · ${info.team}` : name;
+  return info ? info.team : name;
 }
 
 function renderPlayerTabs() {
@@ -252,8 +252,7 @@ function renderPlayerTabs() {
     btn.setAttribute("aria-selected", String(name === active));
     btn.setAttribute("aria-label", playerLabel(name));
     btn.innerHTML = `
-      <img class="team-logo" src="${info.logo}" alt="${info.team}" width="36" height="36">
-      <span class="team-name">${info.name}</span>
+      <img class="team-logo" src="${info.logo}" alt="${info.team}" width="40" height="40">
       <span class="team-club">${info.team}</span>`;
     btn.addEventListener("click", () => selectPlayer(name));
     els.playerTabs.appendChild(btn);
@@ -274,7 +273,7 @@ function renderProgressRow() {
     chip.innerHTML = `
       <div class="progress-chip-left">
         <img class="team-logo team-logo--sm" src="${info.logo}" alt="${info.team}" width="28" height="28">
-        <strong>${info.name}</strong>
+        <strong>${info.team}</strong>
       </div>
       <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
       <span>${count}/${BOARD_SIZE}</span>`;
@@ -296,7 +295,7 @@ function renderPlayerBadge() {
   const info = PLAYER_TEAMS[name];
   els.playerBadge.innerHTML = `
     <img class="team-logo team-logo--md" src="${info.logo}" alt="${info.team}" width="32" height="32">
-    <span>${info.name} · ${info.team}</span>`;
+    <span>${info.team}</span>`;
 }
 
 function fitCellText(cell) {
@@ -409,7 +408,7 @@ function hideBingo() {
 
 function resetMyCard() {
   const name = getActivePlayerName();
-  if (!confirm(`Reset ${name}'s card for everyone? All marked squares will clear.`)) return;
+  if (!confirm(`Reset ${playerLabel(name)}'s card for everyone? All marked squares will clear.`)) return;
 
   if (state.gameWinner === name) {
     state.gameWinner = null;
