@@ -52,19 +52,21 @@ let syncingRemote = false;
 let pushQueue = Promise.resolve();
 let bingoShownFor = sessionStorage.getItem("wgame-bingo-shown") || "";
 
-const els = {
-  playerTabs: document.getElementById("player-tabs"),
-  playerBadge: document.getElementById("player-badge"),
-  progressRow: document.getElementById("progress-row"),
-  syncStatus: document.getElementById("sync-status"),
-  loading: document.getElementById("loading"),
-  boardContainer: document.getElementById("board-container"),
-  resetBtn: document.getElementById("reset-btn"),
-  bingoModal: document.getElementById("bingo-modal"),
-  bingoMessage: document.getElementById("bingo-message"),
-  closeBingoBtn: document.getElementById("close-bingo-btn"),
-  confettiCanvas: document.getElementById("confetti-canvas"),
-};
+const els = {};
+
+function cacheElements() {
+  els.playerTabs = document.getElementById("player-tabs");
+  els.playerBadge = document.getElementById("player-badge");
+  els.progressRow = document.getElementById("progress-row");
+  els.syncStatus = document.getElementById("sync-status");
+  els.loading = document.getElementById("loading");
+  els.boardContainer = document.getElementById("board-container");
+  els.resetBtn = document.getElementById("reset-btn");
+  els.bingoModal = document.getElementById("bingo-modal");
+  els.bingoMessage = document.getElementById("bingo-message");
+  els.closeBingoBtn = document.getElementById("close-bingo-btn");
+  els.confettiCanvas = document.getElementById("confetti-canvas");
+}
 
 function defaultState() {
   return { players: {}, activePlayer: "Ana", gameWinner: null, updatedAt: 0 };
@@ -572,22 +574,20 @@ function animateConfetti() {
   confettiFrame = requestAnimationFrame(animateConfetti);
 }
 
-els.resetBtn?.addEventListener("click", resetMyCard);
-els.closeBingoBtn?.addEventListener("click", hideBingo);
-els.bingoModal?.querySelector(".modal-backdrop")?.addEventListener("click", hideBingo);
-window.addEventListener("resize", () => {
-  if (confettiAnimating) resizeConfettiCanvas();
-  fitAllCellText();
-});
-
-function showStartupError(message) {
-  const board = els.boardContainer;
-  if (!board) return;
-  board.innerHTML = `<p style="grid-column:1/-1;text-align:center;padding:24px;color:#c44;font-weight:600;">${message}</p>`;
+function bindEvents() {
+  els.resetBtn?.addEventListener("click", resetMyCard);
+  els.closeBingoBtn?.addEventListener("click", hideBingo);
+  els.bingoModal?.querySelector(".modal-backdrop")?.addEventListener("click", hideBingo);
+  window.addEventListener("resize", () => {
+    if (confettiAnimating) resizeConfettiCanvas();
+    fitAllCellText();
+  });
 }
 
 function startApp() {
   try {
+    cacheElements();
+    bindEvents();
     bootstrapLocal();
     connectCloud();
   } catch (error) {
