@@ -14,41 +14,41 @@ const PLAYER_TEAMS = {
 
 const PLAYER_ITEMS = {
   Ana: [
-    "Someone talks about Brandon and Ana having a baby",
-    "Aunt Elma asks Uncle Dale for permission for something",
-    "Aunt Elma gives Emily something from her house",
-    "Someone suggests a suitor for Grandma",
-    "Grandma makes a disgusted face when offered unhealthy food",
-    "Half of the people go for a walk with Vózinha",
-    "Juliana scolds Eudes",
-    "Pastor Edma asks for a time of worship",
+    "Someone talks about B. and A. having a baby",
+    "A.E. asks U.D. for permission for something",
+    "A.E. gives E. something from her house",
+    "Someone suggests a suitor for G.",
+    "G. makes a disgusted face when offered unhealthy food",
+    "Half of the people go for a walk with V.",
+    "J. scolds Eu.",
+    "P.E. asks for a time of worship",
   ],
   Brandon: [
-    "Someone talks about how Emily and Brandon were kids and are now married",
-    "Isabella gets jealous of Samuel and says something about it",
-    "Isabella makes a video about the birthday or another event",
-    "Uncle Dale gets a headache and leaves",
-    "Pastor Darren makes a joke about Dale or Eudes being overweight",
-    "Pastor Darren talks about the house renovation or spending too much money",
-    "Pastor Darren gets rejected by Pastor Edma when trying to show physical affection",
+    "Someone talks about how E. and B. were kids and are now married",
+    "I. gets jealous of S. and says something about it",
+    "I. makes a video about the birthday or another event",
+    "U.D. gets a headache and leaves",
+    "P.D. makes a joke about D. or Eu. being overweight",
+    "P.D. talks about the house renovation or spending too much money",
+    "P.D. gets rejected by P.E. when trying to show physical affection",
     "Someone tells a story about the White House",
   ],
   Daniel: [
-    "Someone mentions Daniel and Emily's honeymoon",
-    "Darren fights Daniel",
+    "Someone mentions D. and E.'s honeymoon",
+    "Dn. fights D.",
     "The Calvin Klein story is mentioned",
-    "Eudes cries during a speech",
+    "Eu. cries during a speech",
     "A sex joke is made",
     "Trump or immigration comes up in conversation",
-    "Pastor Edma prays in tongues",
-    "Isabella throws a tantrum because of the noise",
+    "P.E. prays in tongues",
+    "I. throws a tantrum because of the noise",
   ],
 };
 
 const FREE_SPACE = "FREE SPACE";
 const BOARD_SIZE = 9;
 const CENTER_INDEX = 4;
-const STORAGE_KEY = "the-w-game-v5";
+const STORAGE_KEY = "the-w-game-v6";
 const SYNC_TIMEOUT_MS = 8000;
 
 let supabaseClient = null;
