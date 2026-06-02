@@ -45,7 +45,7 @@ const CENTER_INDEX = 4;
 const STORAGE_KEY = "the-w-game-v5";
 const SYNC_TIMEOUT_MS = 8000;
 
-let supabase = null;
+let supabaseClient = null;
 let state = defaultState();
 let confettiAnimating = false;
 let syncingRemote = false;
@@ -176,7 +176,7 @@ function setSyncStatus(text, online) {
 function queuePush() {
   state.updatedAt = Date.now();
   saveLocal();
-  if (!supabase) return;
+  if (!supabaseClient) return;
 
   pushQueue = pushQueue.then(pushRemote).catch(() => {
     setSyncStatus("Offline — saved on this phone", false);
@@ -184,10 +184,10 @@ function queuePush() {
 }
 
 async function pushRemote() {
-  if (syncingRemote || !supabase) return;
+  if (syncingRemote || !supabaseClient) return;
 
   setSyncStatus("Saving…", true);
-  const { error } = await supabase.from("wgame_state").upsert({
+  const { error } = await supabaseClient.from("wgame_state").upsert({
     id: 1,
     state,
     updated_at: new Date(state.updatedAt).toISOString(),
@@ -397,7 +397,7 @@ function resetMyCard() {
 }
 
 async function loadCloudState() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from("wgame_state")
     .select("state, updated_at")
     .eq("id", 1)
@@ -415,9 +415,9 @@ async function seedCloudState() {
 }
 
 function subscribeRealtime() {
-  if (!supabase) return;
+  if (!supabaseClient) return;
 
-  supabase
+  supabaseClient
     .channel("wgame-state")
     .on(
       "postgres_changes",
@@ -464,8 +464,8 @@ function bootstrapLocal() {
 }
 
 async function connectCloud() {
-  supabase = initSupabase();
-  if (!supabase) {
+  supabaseClient = initSupabase();
+  if (!supabaseClient) {
     setSyncStatus("Offline — using this phone only", false);
     return;
   }
