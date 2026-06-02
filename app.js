@@ -36,14 +36,25 @@ const PLAYER_ITEMS = {
 const FREE_SPACE = "FREE SPACE";
 const BOARD_SIZE = 9;
 const CENTER_INDEX = 4;
-const STORAGE_KEY = "the-w-game-v4";
+const STORAGE_KEY = "the-w-game-v5";
 
-let state = loadState();
+const supabase = window.supabase.createClient(
+  window.WGAME_CONFIG.supabaseUrl,
+  window.WGAME_CONFIG.supabaseKey
+);
+
+let state = defaultState();
 let confettiAnimating = false;
+let syncingRemote = false;
+let pushQueue = Promise.resolve();
+let bingoShownFor = sessionStorage.getItem("wgame-bingo-shown") || "";
 
 const els = {
   playerTabs: document.getElementById("player-tabs"),
   playerBadge: document.getElementById("player-badge"),
+  progressRow: document.getElementById("progress-row"),
+  syncStatus: document.getElementById("sync-status"),
+  loading: document.getElementById("loading"),
   boardContainer: document.getElementById("board-container"),
   resetBtn: document.getElementById("reset-btn"),
   bingoModal: document.getElementById("bingo-modal"),
@@ -52,16 +63,8 @@ const els = {
   confettiCanvas: document.getElementById("confetti-canvas"),
 };
 
-function loadState() {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) return JSON.parse(saved);
-  } catch (_) {}
-  return { players: {}, activePlayer: "Ana", gameWinner: null };
-}
-
-function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+function defaultState() {
+  return { players: {}, activePlayer: "Ana", gameWinner: null, updatedAt: 0 };
 }
 
 function shuffle(array) {
@@ -119,6 +122,22 @@ function normalizePlayer(data, playerName) {
   return data;
 }
 
+function normalizeFullState(raw) {
+  const next = defaultState();
+  if (raw && typeof raw === "object") {
+    next.activePlayer = PLAYERS.includes(raw.activePlayer) ? raw.activePlayer : "Ana";
+    next.gameWinner = raw.gameWinner || null;
+    next.updatedAt = raw.updatedAt || 0;
+    if (raw.players && typeof raw.players === "object") {
+      next.players = raw.players;
+    }
+  }
+  PLAYERS.forEach((name) => {
+    next.players[name] = normalizePlayer(next.players[name], name);
+  });
+  return next;
+}
+
 function ensureAllPlayers() {
   PLAYERS.forEach((name) => {
     state.players[name] = normalizePlayer(state.players[name], name);
@@ -132,6 +151,75 @@ function getActivePlayerName() {
   return PLAYERS.includes(state.activePlayer) ? state.activePlayer : "Ana";
 }
 
+function markedCount(playerName) {
+  const player = state.players[playerName];
+  if (!player) return 0;
+  return player.marked.filter(Boolean).length;
+}
+
+function saveLocal() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function setSyncStatus(text, online) {
+  if (!els.syncStatus) return;
+  els.syncStatus.textContent = text;
+  els.syncStatus.classList.toggle("online", online);
+  els.syncStatus.classList.toggle("offline", !online);
+}
+
+function queuePush() {
+  state.updatedAt = Date.now();
+  saveLocal();
+  pushQueue = pushQueue.then(pushRemote).catch(() => {
+    setSyncStatus("Offline — saved on this phone", false);
+  });
+}
+
+async function pushRemote() {
+  if (syncingRemote) return;
+
+  setSyncStatus("Saving…", true);
+  const { error } = await supabase.from("wgame_state").upsert({
+    id: 1,
+    state,
+    updated_at: new Date(state.updatedAt).toISOString(),
+  });
+
+  if (error) {
+    setSyncStatus("Offline — saved on this phone", false);
+    throw error;
+  }
+
+  setSyncStatus("Live — everyone sees updates", true);
+}
+
+function applyRemoteState(row, fromRealtime = false) {
+  if (!row || !row.state) return;
+
+  const remoteTime = new Date(row.updated_at).getTime();
+  if (remoteTime < (state.updatedAt || 0)) return;
+
+  const previousWinner = state.gameWinner;
+  syncingRemote = true;
+  state = normalizeFullState(row.state);
+  state.updatedAt = remoteTime;
+  saveLocal();
+  renderUI();
+  syncingRemote = false;
+
+  if (state.gameWinner && state.gameWinner !== previousWinner) {
+    maybeShowBingo(state.gameWinner, fromRealtime);
+  }
+}
+
+function maybeShowBingo(winner, fromRemote) {
+  if (!winner || bingoShownFor === winner) return;
+  bingoShownFor = winner;
+  sessionStorage.setItem("wgame-bingo-shown", winner);
+  showBingo(winner, fromRemote);
+}
+
 function renderPlayerTabs() {
   const active = getActivePlayerName();
   els.playerTabs.innerHTML = "";
@@ -140,6 +228,7 @@ function renderPlayerTabs() {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "player-tab" + (name === active ? " active" : "");
+    if (state.players[name]?.hasWon) btn.classList.add("finished");
     btn.textContent = name;
     btn.setAttribute("role", "tab");
     btn.setAttribute("aria-selected", String(name === active));
@@ -148,8 +237,30 @@ function renderPlayerTabs() {
   });
 }
 
+function renderProgressRow() {
+  if (!els.progressRow) return;
+  els.progressRow.innerHTML = "";
+
+  PLAYERS.forEach((name) => {
+    const count = markedCount(name);
+    const chip = document.createElement("div");
+    chip.className = "progress-chip" + (name === getActivePlayerName() ? " active" : "");
+    if (state.players[name]?.hasWon) chip.classList.add("finished");
+    chip.innerHTML = `<strong>${name}</strong><span>${count}/${BOARD_SIZE}</span>`;
+    chip.addEventListener("click", () => selectPlayer(name));
+    els.progressRow.appendChild(chip);
+  });
+
+  if (state.gameWinner) {
+    const winner = document.createElement("p");
+    winner.className = "game-winner";
+    winner.textContent = `🏆 ${state.gameWinner} finished first`;
+    els.progressRow.appendChild(winner);
+  }
+}
+
 function renderPlayerBadge() {
-  els.playerBadge.textContent = "8 moments";
+  els.playerBadge.textContent = "8 moments · synced for everyone";
 }
 
 function fitCellText(cell) {
@@ -205,6 +316,7 @@ function renderBoard() {
 
 function renderUI() {
   renderPlayerTabs();
+  renderProgressRow();
   renderPlayerBadge();
   renderBoard();
 }
@@ -212,7 +324,7 @@ function renderUI() {
 function selectPlayer(name) {
   if (!PLAYERS.includes(name)) return;
   state.activePlayer = name;
-  saveState();
+  queuePush();
   renderUI();
 }
 
@@ -222,18 +334,22 @@ function toggleCell(index) {
   if (player.hasWon) return;
 
   player.marked[index] = !player.marked[index];
-  saveState();
   renderBoard();
+  queuePush();
 
   if (checkBoardComplete(player.marked) && !player.hasWon) {
     player.hasWon = true;
-    saveState();
 
     if (!state.gameWinner) {
       state.gameWinner = name;
-      saveState();
-      showBingo(name);
+      queuePush();
+      maybeShowBingo(name, false);
+    } else {
+      queuePush();
     }
+
+    renderProgressRow();
+    renderPlayerTabs();
   }
 }
 
@@ -241,8 +357,9 @@ function checkBoardComplete(marked) {
   return marked.length === BOARD_SIZE && marked.every(Boolean);
 }
 
-function showBingo(playerName) {
-  els.bingoMessage.textContent = `${playerName} finished their card first — BINGO! 🎉`;
+function showBingo(playerName, fromRemote) {
+  const prefix = fromRemote ? "Everyone saw it — " : "";
+  els.bingoMessage.textContent = `${prefix}${playerName} finished their card first — BINGO! 🎉`;
   els.bingoModal.classList.remove("hidden");
   startConfetti();
 }
@@ -254,15 +371,84 @@ function hideBingo() {
 
 function resetMyCard() {
   const name = getActivePlayerName();
-  if (!confirm(`Reset ${name}'s card and clear all marked squares?`)) return;
+  if (!confirm(`Reset ${name}'s card for everyone? All marked squares will clear.`)) return;
 
   if (state.gameWinner === name) {
     state.gameWinner = null;
+    bingoShownFor = "";
+    sessionStorage.removeItem("wgame-bingo-shown");
   }
 
   state.players[name] = createBoard(name);
-  saveState();
-  renderBoard();
+  queuePush();
+  renderUI();
+}
+
+async function loadCloudState() {
+  const { data, error } = await supabase
+    .from("wgame_state")
+    .select("state, updated_at")
+    .eq("id", 1)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
+async function seedCloudState() {
+  ensureAllPlayers();
+  state.updatedAt = Date.now();
+  saveLocal();
+  await pushRemote();
+}
+
+function subscribeRealtime() {
+  supabase
+    .channel("wgame-state")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "wgame_state", filter: "id=eq.1" },
+      (payload) => {
+        const row = payload.new;
+        if (row) applyRemoteState(row, true);
+      }
+    )
+    .subscribe((status) => {
+      if (status === "SUBSCRIBED") {
+        setSyncStatus("Live — everyone sees updates", true);
+      }
+    });
+}
+
+async function init() {
+  try {
+    const local = localStorage.getItem(STORAGE_KEY);
+    if (local) state = normalizeFullState(JSON.parse(local));
+
+    setSyncStatus("Connecting…", true);
+    const cloud = await loadCloudState();
+
+    if (cloud) {
+      applyRemoteState(cloud, false);
+    } else {
+      await seedCloudState();
+    }
+
+    subscribeRealtime();
+  } catch (_) {
+    ensureAllPlayers();
+    setSyncStatus("Offline — using this phone only", false);
+    if (els.loading) els.loading.classList.add("hidden");
+    renderUI();
+    return;
+  }
+
+  if (els.loading) els.loading.classList.add("hidden");
+  renderUI();
+
+  if (state.gameWinner) {
+    maybeShowBingo(state.gameWinner, false);
+  }
 }
 
 // Confetti
@@ -341,6 +527,4 @@ window.addEventListener("resize", () => {
   fitAllCellText();
 });
 
-ensureAllPlayers();
-saveState();
-renderUI();
+init();

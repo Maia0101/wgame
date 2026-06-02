@@ -1,9 +1,10 @@
-const CACHE_NAME = "the-w-game-v8";
+const CACHE_NAME = "the-w-game-v9";
 const ASSETS = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
+  "./config.js",
   "./manifest.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
@@ -26,6 +27,13 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
+  const url = event.request.url;
+
+  if (url.includes("supabase.co") || url.includes("cdn.jsdelivr.net")) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request).then((cached) => {
       const fetchPromise = fetch(event.request).then((response) => {
