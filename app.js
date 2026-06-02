@@ -57,7 +57,7 @@ function loadState() {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) return JSON.parse(saved);
   } catch (_) {}
-  return { players: {}, activePlayer: "Ana" };
+  return { players: {}, activePlayer: "Ana", gameWinner: null };
 }
 
 function saveState() {
@@ -225,30 +225,24 @@ function toggleCell(index) {
   saveState();
   renderBoard();
 
-  if (checkBingo(player.marked) && !player.hasWon) {
+  if (checkBoardComplete(player.marked) && !player.hasWon) {
     player.hasWon = true;
     saveState();
-    showBingo(name);
+
+    if (!state.gameWinner) {
+      state.gameWinner = name;
+      saveState();
+      showBingo(name);
+    }
   }
 }
 
-const WIN_LINES = [
-  [0, 1, 2],
-  [3, 4, 5],
-  [6, 7, 8],
-  [0, 3, 6],
-  [1, 4, 7],
-  [2, 5, 8],
-  [0, 4, 8],
-  [2, 4, 6],
-];
-
-function checkBingo(marked) {
-  return WIN_LINES.some((line) => line.every((i) => marked[i]));
+function checkBoardComplete(marked) {
+  return marked.length === BOARD_SIZE && marked.every(Boolean);
 }
 
 function showBingo(playerName) {
-  els.bingoMessage.textContent = `${playerName} got a BINGO! 🎉`;
+  els.bingoMessage.textContent = `${playerName} finished their card first — BINGO! 🎉`;
   els.bingoModal.classList.remove("hidden");
   startConfetti();
 }
@@ -261,6 +255,10 @@ function hideBingo() {
 function resetMyCard() {
   const name = getActivePlayerName();
   if (!confirm(`Reset ${name}'s card and clear all marked squares?`)) return;
+
+  if (state.gameWinner === name) {
+    state.gameWinner = null;
+  }
 
   state.players[name] = createBoard(name);
   saveState();
