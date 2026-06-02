@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="The W Game">
+  <meta name="theme-color" content="#6B4EAA">
+  <meta name="description" content="The W Game — tap squares as family moments happen!">
+  <title>The W Game</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <header class="header">
+      <h1 class="title">🎉 The W Game</h1>
+      <p class="subtitle">Tap a square when it happens!</p>
+    </header>
+
+    <section class="player-section">
+      <p class="player-label">Who's playing?</p>
+      <div id="player-tabs" class="player-tabs" role="tablist"></div>
+      <p id="player-badge" class="player-badge"></p>
+    </section>
+
+    <main id="board-container" class="board-container" aria-label="Bingo board"></main>
+
+    <div class="actions">
+      <button id="reset-btn" class="btn btn-danger" type="button">Reset Card</button>
+    </div>
+  </div>
+
+  <!-- Bingo Modal -->
+  <div id="bingo-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="bingo-title">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content bingo-modal-content">
+      <div class="bingo-emoji">🎊</div>
+      <h2 id="bingo-title" class="bingo-title">BINGO!</h2>
+      <p id="bingo-message" class="bingo-message">You got a bingo!</p>
+      <button id="close-bingo-btn" class="btn btn-primary" type="button">Awesome!</button>
+    </div>
+  </div>
+
+  <canvas id="confetti-canvas" aria-hidden="true"></canvas>
+
+  <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>
